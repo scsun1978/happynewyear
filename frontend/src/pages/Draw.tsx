@@ -15,6 +15,15 @@ const Draw = () => {
         });
     }, [setUser, prize]); // Refresh info when prize changes (收下好运)
 
+    const HORSE_BLESSINGS = [
+        "龙马精神，岁岁平安",
+        "马到成功，前程似锦",
+        "万马奔腾，财源滚滚",
+        "一马当先，步步高升",
+        "策马扬鞭，扬帆起航",
+        "骏马奔腾，福星高照"
+    ];
+
     const handleDraw = async () => {
         if (!user || user.chances <= 0) {
             alert("抽奖次数不足！请先去玩游戏获取次数。");
@@ -27,9 +36,13 @@ const Draw = () => {
 
             const res = await api.post('/draw');
             if (res.data.code === 0) {
-                setPrize(res.data.data);
-                // The backend already deducted chance, we just need to locally sync if not re-fetching immediately
-                // But re-fetching via useEffect dependency on 'prize' is cleaner.
+                let drawData = res.data.data;
+                // If it's a blessing (type 3), spice it up with random horse year wishes
+                if (drawData.type === 3) {
+                    const randomBlessing = HORSE_BLESSINGS[Math.floor(Math.random() * HORSE_BLESSINGS.length)];
+                    drawData = { ...drawData, name: randomBlessing };
+                }
+                setPrize(drawData);
             } else {
                 alert(res.data.msg);
             }
@@ -94,9 +107,11 @@ const Draw = () => {
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
                     <div className="bg-festival-red p-8 rounded-2xl border-4 border-yellow-500 text-center max-w-sm w-full animate-pop-in shadow-2xl relative">
                         <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-6xl">
-                            🎉
+                            {prize.type === 3 ? "🧧" : "🎉"}
                         </div>
-                        <h2 className="text-3xl font-bold text-yellow-300 mb-6 mt-4">恭喜中奖!</h2>
+                        <h2 className="text-3xl font-bold text-yellow-300 mb-6 mt-4">
+                            {prize.type === 3 ? "新春祝福" : "恭喜中奖!"}
+                        </h2>
 
                         <div className="bg-red-900/50 p-6 rounded-xl mb-6 border border-yellow-500/20">
                             <p className="text-2xl font-bold text-white mb-2">{prize.name}</p>
@@ -104,7 +119,9 @@ const Draw = () => {
                                 <p className="text-yellow-400 font-mono text-xl mb-2">+{prize.value} 积分</p>
                             )}
                             <p className="text-sm text-yellow-200/60 lowercase text-capitalize">
-                                {prize.type === 4 ? "积分已直接存入您的总账户！" : "请联系行政领取您的奖品"}
+                                {prize.type === 3
+                                    ? "祝您马到成功，万事如意！"
+                                    : (prize.type === 4 ? "积分已直接存入您的总账户！" : "请联系行政领取您的奖品")}
                             </p>
                         </div>
 
