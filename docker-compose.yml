@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: happynewyear-app
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      - WEWORK_SECRET=${WEWORK_SECRET}
+      - DB_DATASOURCE=${DB_DATASOURCE}
+      - APP_SECRET=${APP_SECRET}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+    volumes:
+      - ./deploy/config:/app/etc
+      - ./static:/app/static
+      - ./happynewyear:/app/happynewyear
+    command: ./happynewyear -f etc/config.yaml
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - backend-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: happynewyear-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: happynewyear
+      TZ: Asia/Shanghai
+    volumes:
+      - ./deploy/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - mysql_data:/var/lib/mysql
+    networks:
+      - backend-net
+
+  redis:
+    image: redis:7.0
+    container_name: happynewyear-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend-net
+
+networks:
+  backend-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

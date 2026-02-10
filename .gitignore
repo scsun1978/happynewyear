@@ -1,0 +1,30 @@
+# Binaries
+happynewyear
+functional_test
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+.go/
+.go_local/
+vendor/
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Environment / Secrets
+.env
+.env.local
+
+# Docker / DB
+mysql_data/
+
+# OS
+.DS_Store
+Thumbs.db

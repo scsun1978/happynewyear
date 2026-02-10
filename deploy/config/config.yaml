@@ -1,0 +1,26 @@
+Name: happynewyear-api
+Host: 0.0.0.0
+Port: 8080
+
+Log:
+  Mode: file
+  Path: logs
+  Level: info
+
+Database:
+  DataSource: root:RootRefresh2026!@tcp(mysql:3306)/happynewyear?charset=utf8mb4&parseTime=True&loc=Local
+
+Redis:
+  Host: redis:6379
+  Type: node
+
+WeCom:
+  CorpID: "ww112f4f89390a03cd"
+  AgentID: 1000037
+  Secret: "ENV_VAR_SECRET" # To be injected via environment variable
+
+Game:
+  AppSecret: \"CHANGE_THIS_TO_RANDOM_SECRET\" # For request signing
+  AdminPassword: \"AdminRefresh2026!\" # Default fallback password
+  ScoreToChanceRatio: 100 # 100 points = 1 chance
+  MaxChancesPerDay: 3
