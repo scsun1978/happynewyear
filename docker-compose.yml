@@ -15,8 +15,6 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       - ./deploy/config:/app/etc
-      - ./static:/app/static
-      - ./happynewyear:/app/happynewyear
     command: ./happynewyear -f etc/config.yaml
     ports:
       - "8080:8080"
