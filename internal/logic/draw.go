@@ -45,6 +45,23 @@ func (l *DrawLogic) Draw(userID string) (*model.Award, error) {
 			return err
 		}
 
+		// Filter: One Vacation Reward Card per person
+		var wonCard bool
+		tx.Model(&model.DrawRecord{}).
+			Where("user_id = ? AND award_name = ?", userID, "休假奖励卡").
+			Select("count(*) > 0").
+			Scan(&wonCard)
+
+		if wonCard {
+			var filtered []model.Award
+			for _, a := range candidates {
+				if a.Name != "休假奖励卡" {
+					filtered = append(filtered, a)
+				}
+			}
+			candidates = filtered
+		}
+
 		selected := l.selectAward(candidates)
 		if selected == nil {
 			// Fallback to Sunshine (Type=3 or 4) if configured, or error
