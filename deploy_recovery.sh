@@ -1,3 +1,244 @@
+#!/bin/bash
+set -e
+
+REPO_DIR="/root/happynewyear"
+cd $REPO_DIR
+
+echo "Updating internal/logic/admin.go..."
+cat <<'EOF' > internal/logic/admin.go
+package logic
+
+import (
+	"happynewyear/internal/model"
+	"happynewyear/internal/svc"
+)
+
+type AdminLogic struct {
+	ctx *svc.ServiceContext
+}
+
+func NewAdminLogic(ctx *svc.ServiceContext) *AdminLogic {
+	return &AdminLogic{ctx: ctx}
+}
+
+// CheckAuth verifies the admin secret
+func (l *AdminLogic) CheckAuth(secret string) bool {
+	return secret == l.ctx.Config.Game.AdminPassword
+}
+
+type AdminUserItem struct {
+	ID         int64  `json:"id"`
+	UserID     string `json:"user_id"`
+	Name       string `json:"name"`
+	Score      int64  `json:"score"`
+	Chances    int    `json:"chances"`
+	Level      int    `json:"level"`
+	CreatedAt  string `json:"created_at"`
+}
+
+func (l *AdminLogic) GetAllUsers() ([]AdminUserItem, error) {
+	var users []model.User
+	err := l.ctx.DB.Order("total_score desc").Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var result []AdminUserItem
+	for _, u := range users {
+		result = append(result, AdminUserItem{
+			ID:        u.ID,
+			UserID:    u.UserID,
+			Name:      u.Name,
+			Score:     u.TotalScore,
+			Chances:   u.Chances,
+			Level:     CalculateLevel(u.TotalScore),
+			CreatedAt: u.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return result, nil
+}
+
+type AdminDrawRecord struct {
+	ID        int64  `json:"id"`
+	UserID    string `json:"user_id"`
+	Name      string `json:"name"`
+	AwardName string `json:"award_name"`
+	CreatedAt string `json:"created_at"`
+	DataHash  string `json:"data_hash"`
+}
+
+func (l *AdminLogic) GetDrawRecords() ([]AdminDrawRecord, error) {
+	var records []model.DrawRecord
+	err := l.ctx.DB.Order("id desc").Find(&records).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var users []model.User
+	l.ctx.DB.Find(&users)
+	nameMap := make(map[string]string)
+	for _, u := range users {
+		nameMap[u.UserID] = u.Name
+	}
+
+	var result []AdminDrawRecord
+	for _, r := range records {
+		result = append(result, AdminDrawRecord{
+			ID:        r.ID,
+			UserID:    r.UserID,
+			Name:      nameMap[r.UserID],
+			AwardName: r.AwardName,
+			DataHash:  r.DataHash,
+			CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return result, nil
+}
+
+func (l *AdminLogic) GetAllAwards() ([]model.Award, error) {
+	var awards []model.Award
+	err := l.ctx.DB.Order("id asc").Find(&awards).Error
+	return awards, err
+}
+
+func (l *AdminLogic) ResetData() error {
+	tables := []string{"draw_records", "game_records"}
+	for _, table := range tables {
+		if err := l.ctx.DB.Exec("TRUNCATE TABLE " + table).Error; err != nil {
+			return err
+		}
+	}
+	if err := l.ctx.DB.Model(&model.User{}).Where("1 = 1").Updates(map[string]interface{}{
+		"total_score": 0,
+		"chances":     0,
+	}).Error; err != nil {
+		return err
+	}
+	if err := l.ctx.DB.Exec("UPDATE awards SET remaining = total, version = 0").Error; err != nil {
+		return err
+	}
+	return nil
+}
+EOF
+
+echo "Updating internal/handler/admin_handler.go..."
+cat <<'EOF' > internal/handler/admin_handler.go
+package handler
+
+import (
+	"happynewyear/internal/logic"
+	"happynewyear/internal/svc"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func NewAdminUsersHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+		users, err := l.GetAllUsers()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": users})
+	}
+}
+
+func NewAdminDrawsHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+		records, err := l.GetDrawRecords()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": records})
+	}
+}
+
+func NewAdminAwardsHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+		awards, err := l.GetAllAwards()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": awards})
+	}
+}
+
+func NewAdminResetDataHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+		if err := l.ResetData(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}
+EOF
+
+echo "Updating internal/handler/routes.go..."
+cat <<'EOF' > internal/handler/routes.go
+package handler
+
+import (
+	"happynewyear/internal/svc"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func RegisterHandlers(r *gin.Engine, ctx *svc.ServiceContext) {
+	r.GET("/health", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	api := r.Group("/api")
+	{
+		api.GET("/login", NewLoginHandler(ctx))
+		api.GET("/user/info", NewUserInfoHandler(ctx))
+		api.POST("/game/score", NewGameScoreHandler(ctx))
+		api.GET("/game/awards", NewAwardsHandler(ctx))
+		api.POST("/game/draw", NewDrawHandler(ctx))
+		api.GET("/rank", NewRankHandler(ctx))
+
+		admin := api.Group("/admin")
+		{
+			admin.GET("/users", NewAdminUsersHandler(ctx))
+			admin.GET("/draws", NewAdminDrawsHandler(ctx))
+			admin.GET("/awards", NewAdminAwardsHandler(ctx))
+			admin.POST("/reset", NewAdminResetDataHandler(ctx))
+		}
+	}
+}
+EOF
+
+echo "Updating frontend/src/pages/Admin.tsx..."
+cat <<'EOF' > frontend/src/pages/Admin.tsx
 import { useState } from 'react';
 import api from '../services/api';
 import LevelBadge from '../components/LevelBadge';
@@ -76,7 +317,6 @@ const Admin = () => {
         try {
             await api.post('/admin/reset', {}, { headers: { 'X-Admin-Secret': secret } });
             alert('数据已成功重置！');
-            // Refresh data
             const [userRes, drawRes] = await Promise.all([
                 api.get('/admin/users', { headers: { 'X-Admin-Secret': secret } }),
                 api.get('/admin/draws', { headers: { 'X-Admin-Secret': secret } })
@@ -272,3 +512,10 @@ const downloadCSV = (content: string, filename: string) => {
 };
 
 export default Admin;
+EOF
+
+echo "Starting build..."
+docker build --no-cache -t happynewyear-app .
+echo "Restarting containers..."
+docker-compose up -d
+echo "Done!"

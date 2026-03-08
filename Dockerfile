@@ -20,7 +20,7 @@ WORKDIR /app
 RUN apk --no-cache add ca-certificates tzdata
 COPY --from=backend-builder /app/happynewyear .
 # Copy pre-built static assets from the frontend-builder stage
-COPY --from=frontend-builder /app/frontend/dist ./static
+COPY --from=frontend-builder /app/static ./static
 # Create assets dir just in case
 RUN mkdir -p static/assets
 

@@ -31,6 +31,9 @@ func RegisterHandlers(r *gin.Engine, ctx *svc.ServiceContext) {
 		admin := api.Group("/admin")
 		{
 			admin.GET("/users", NewAdminListUsersHandler(ctx))
+			admin.GET("/draws", NewAdminListDrawRecordsHandler(ctx))
+			admin.GET("/awards", NewAdminListAwardsHandler(ctx))
+			admin.POST("/reset", NewAdminResetDataHandler(ctx))
 		}
 
 		// Protected Routes

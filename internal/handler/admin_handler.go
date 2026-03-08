@@ -42,3 +42,63 @@ func NewAdminListUsersHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"data": list})
 	}
 }
+func NewAdminListAwardsHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Simple Auth Check
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+
+		list, err := l.GetAllAwards()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"data": list})
+	}
+}
+
+// NewAdminListDrawRecordsHandler
+func NewAdminListDrawRecordsHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Simple Auth Check
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+
+		list, err := l.GetDrawRecords()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"data": list})
+	}
+}
+
+// NewAdminResetDataHandler
+func NewAdminResetDataHandler(ctx *svc.ServiceContext) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Simple Auth Check
+		secret := c.GetHeader("X-Admin-Secret")
+		l := logic.NewAdminLogic(ctx)
+		if !l.CheckAuth(secret) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid admin secret"})
+			return
+		}
+
+		if err := l.ResetData(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}

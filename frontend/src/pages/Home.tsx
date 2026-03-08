@@ -175,11 +175,23 @@ const Home = () => {
                                 </li>
                                 <li className="flex items-start">
                                     <span className="mr-2">3.</span>
-                                    <span><strong className="text-yellow-300">每 100 分</strong> 可获得 1 次抽奖机会，上不封顶！</span>
+                                    <span><strong className="text-yellow-300">每 100 分</strong> 可获得 1 次抽奖机会！</span>
                                 </li>
-                                <li className="flex items-start">
-                                    <span className="mr-2">4.</span>
-                                    <span>每局游戏限时 60 秒。</span>
+                            </ul>
+
+                            <h4 className="text-lg font-bold text-yellow-300 mt-6 mb-2 border-b border-yellow-500/30 pb-1">奖池大礼</h4>
+                            <ul className="space-y-2 text-yellow-100/80 text-xs">
+                                <li className="flex justify-between items-center">
+                                    <span>🌟 休假奖励卡</span>
+                                    <span className="bg-yellow-500/20 text-yellow-300 px-2 rounded">仅 1 名</span>
+                                </li>
+                                <li className="flex justify-between items-center">
+                                    <span>💰 100/500/1000 积分</span>
+                                    <span className="text-yellow-400">随机中奖</span>
+                                </li>
+                                <li className="flex justify-between items-center">
+                                    <span>🧨 新春祝福语</span>
+                                    <span className="text-yellow-400">人均有份</span>
                                 </li>
                             </ul>
                             <div className="mt-6 text-center">

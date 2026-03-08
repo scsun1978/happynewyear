@@ -5,6 +5,7 @@ import (
 	"happynewyear/internal/config"
 	"happynewyear/internal/model"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/mysql"
@@ -16,12 +17,21 @@ type ServiceContext struct {
 	DB     *gorm.DB
 	Redis  *redis.Client
 }
-
 func NewServiceContext(c config.Config) *ServiceContext {
-	// 1. Init MySQL
-	db, err := gorm.Open(mysql.Open(c.Database.DataSource), &gorm.Config{})
+	// 1. Init MySQL with Retry
+	var db *gorm.DB
+	var err error
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(mysql.Open(c.Database.DataSource), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect to database (attempt %d/10): %v", i+1, err)
+		time.Sleep(3 * time.Second)
+	}
+
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database after retries: %v", err)
 	}
 
 	// Auto Migrate (Safe for MVP, but be careful in Prod)

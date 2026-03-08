@@ -45,17 +45,20 @@ func (l *DrawLogic) Draw(userID string) (*model.Award, error) {
 			return err
 		}
 
-		// Filter: One Vacation Reward Card per person
-		var wonCard bool
+		// Filter: One of each special card per person
+		var wonPrizes []string
 		tx.Model(&model.DrawRecord{}).
 			Where("user_id = ? AND award_name = ?", userID, "休假奖励卡").
-			Select("count(*) > 0").
-			Scan(&wonCard)
+			Pluck("award_name", &wonPrizes)
 
-		if wonCard {
+		if len(wonPrizes) > 0 {
+			prizeMap := make(map[string]bool)
+			for _, p := range wonPrizes {
+				prizeMap[p] = true
+			}
 			var filtered []model.Award
 			for _, a := range candidates {
-				if a.Name != "休假奖励卡" {
+				if !prizeMap[a.Name] {
 					filtered = append(filtered, a)
 				}
 			}
